@@ -33,10 +33,11 @@ class Server {
 
         //Permitimos realizar solicitudes al servidor
         this.app.use(cors());
+
     }
 
     routes(){
-        
+        this.app.use(this._usuariosPath,require('../routes/usuario.router'))
     }
 
     listen(){
