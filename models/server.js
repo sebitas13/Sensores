@@ -1,6 +1,6 @@
 
 const express = require('express');
-const {database} = require('../database.db');
+const {database} = require('../database/config.db');
 
 
 class Server {
