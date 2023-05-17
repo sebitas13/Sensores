@@ -4,6 +4,7 @@ const express = require('express');
 const cors = require('cors');
 var WebSocketServer = require('websocket').server;
 var http = require('http');
+const { isKeyObject } = require('util/types');
 
 class Server {
 
@@ -30,6 +31,7 @@ class Server {
         });
 
         
+        
         this._usuariosPath = '/api/usuarios'
         
         // this.conexionDB();
@@ -47,14 +49,16 @@ class Server {
 
     sockets(){
 
+        let conexiones = [];
+
         function originIsAllowed(origin) {
             //ponga la lógica aquí para detectar si el origen especificado está permitido.
             return true;
         }
 
         this.wsServer.on('request', function(request) {
-            console.log(request)
-            
+           // console.log(request)
+
             if (!originIsAllowed(request.origin)) {
               // Asegúrese de que solo aceptemos solicitudes de un origen permitido
               request.reject();
@@ -64,37 +68,61 @@ class Server {
             
             var connection = request.accept(null, request.origin)
             console.log((new Date()) + ' Connection accepted.');
+            conexiones.push(connection);
+            console.log(connection.remoteAddress + " connected - Protocol Version " + connection.webSocketVersion);
         
+
+            //Manejar mensajes entrantes
+            
             connection.on('message', function(message) {
+
                 if (message.type === 'utf8') {
-        
-                    let {temp,pir}=   JSON.parse(message.utf8Data)  ;
                     
-                    let obj = {
-                        temp : temp,
-                        pir : pir,
-                        fecha : (new Date().toLocaleString())
+                    
+                    try {
+
+                        let {ldr,pir,temp_c,temp_f,hume,s_ter,}=   JSON.parse(message.utf8Data)  ;
+                    
+                        let obj = {
+                            LDR : ldr,
+                            TempC : temp_c,
+                            TempF : temp_f,
+                            Humedad : hume,
+                            Sensacion_Termica : s_ter,
+                            Pir : pir,
+                            Fecha : (new Date().toLocaleString())
+                        }
+                        console.log({obj});
+                        //connection.sendUTF("Saludos desde el Servidor NodeJS");
+
+                        
+                        //console.log("Mensaje desde Node " + message.utf8Data);
+                   } catch (error) { 
+
+                        
+                    }finally{
+                        conexiones.forEach( con => {
+                            con.send(message.utf8Data)
+                        });    
+                        //console.log("Mensaje desde Node " + message.utf8Data);
                     }
-        
+
                     
-                    
-                    // db.setItem('zen',JSON.stringify(obj));
-                    console.log(obj);
-        
-                   // console.log('Received Message: ' + message.utf8Data);
-                    //connection.sendUTF(message.utf8Data); this resend the reseived message, instead of it i will send a custom message. hello from nodejs
-                    connection.sendUTF("Saludos desde el Servidor NodeJS");
                 }
-                else if (message.type === 'binary') {
-                    console.log('Received Binary Message of ' + message.binaryData.length + ' bytes');
-                    connection.sendBytes(message.binaryData);
-                }
+                
+
+                
             });
         
         
         
             connection.on('close', function(reasonCode, description) {
                 console.log((new Date()) + ' Peer ' + connection.remoteAddress + ' disconnected.');
+                var index = conexiones.indexOf(connection);
+                if (index !== -1) {
+                    // remove the connection from the pool
+                    conexiones.splice(index, 1);
+                }
             });
 
             
@@ -112,6 +140,9 @@ class Server {
 
         //Permitimos realizar solicitudes al servidor
         this.app.use(cors());
+
+        // Directorio Público
+        this.app.use( express.static('public') );
 
     }
 
