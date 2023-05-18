@@ -1,13 +1,17 @@
 
 const express = require('express');
-//const {database} = require('../database/config.db');
+const {database} = require('../database/config.db');
 const cors = require('cors');
 var WebSocketServer = require('websocket').server;
 var http = require('http');
 const { isKeyObject } = require('util/types');
+const {Sensor} = require('../models/sensor')
+
+
 
 class Server {
 
+    static arraySensores = [];
 
     constructor(){
         //Creamos una función de controlador de solicitudes
@@ -34,13 +38,33 @@ class Server {
         
         this._usuariosPath = '/api/usuarios'
         
-        // this.conexionDB();
+        this.conexionDB();
         this.middlewares();
         this.routes();
 
         this.sockets();
-
+        
     }
+
+    static async tarea(){
+        console.log('dentro del async tarea programada, esto es cada 10 segundos');
+
+        if(Server.arraySensores.length>0){
+            const sensor = new Sensor({
+                lecturas : Server.arraySensores
+            });
+
+            await sensor.save();
+            Server.arraySensores.length = 0;
+        }else{
+            console.log('Array vacio');
+        }
+        
+        
+        
+    }
+
+   
 
     //conexion con mongodb
     conexionDB(){ 
@@ -50,7 +74,7 @@ class Server {
     sockets(){
 
         let conexiones = [];
-
+        
         function originIsAllowed(origin) {
             //ponga la lógica aquí para detectar si el origen especificado está permitido.
             return true;
@@ -71,11 +95,12 @@ class Server {
             conexiones.push(connection);
             console.log(connection.remoteAddress + " connected - Protocol Version " + connection.webSocketVersion);
         
-
+            
             //Manejar mensajes entrantes
             
             connection.on('message', function(message) {
 
+                
                 if (message.type === 'utf8') {
                     
                     
@@ -92,6 +117,8 @@ class Server {
                             Pir : pir,
                             Fecha : (new Date().toLocaleString())
                         }
+                        Server.arraySensores.push(obj);
+                        console.log("push : " + Server.arraySensores);
                         console.log({obj});
                         //connection.sendUTF("Saludos desde el Servidor NodeJS");
 
@@ -131,6 +158,7 @@ class Server {
         
     }
 
+  
     
 
     middlewares(){
@@ -157,6 +185,8 @@ class Server {
         })
     }
 }
+
+
 
 module.exports = {
     Server
