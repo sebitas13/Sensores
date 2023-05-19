@@ -18,7 +18,7 @@ function init() {
 function wsConnect() {
     // Connect to WebSocket server
     //websocket = new WebSocket("ws://localhost:5000");
-    websocket = new WebSocket("ws://sensores-production.up.railway.app");
+    websocket = new WebSocket("wss://sensores-production.up.railway.app");
 
     // Asignación de callbacks
     websocket.onopen = function (evt) {
